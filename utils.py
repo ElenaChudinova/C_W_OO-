@@ -6,17 +6,15 @@ import os
 import datetime
 import isodate
 
-path_hhru = "./vacancies_hh.json"
-path_sjob = "./vacancies_sj.json"
+path_vacancies = "./vacancies.json"
 
 
 class Vacations(ABC):
-    @abstractmethod
-    def get_vacancies(self):
-        pass
+    pass
 
 
-class HHru(Vacations):
+
+class HHru():
     def __init__(self):
             self.url = 'https://api.hh.ru/vacancies'
 
@@ -28,17 +26,13 @@ class HHru(Vacations):
             "per_page": 100,
             "page": 0
         }
-        response_hh = requests.get(self.url, headers=headers, params=params)
-        data = response_hh.json()
-        json.dumps(data, skipkeys=False, ensure_ascii=False, default=str, indent=4)
-        with open(path_hhru, 'w') as f:
-            f.write(data)
-
-        return data
+        response_hh = requests.get(self.url, headers=headers, params=params).json()
+        json.dumps(response_hh, skipkeys=False, ensure_ascii=False, default=str, indent=4)
+        return response_hh
 
 
 
-class SuperJob(Vacations):
+class SuperJob():
     def __init__(self):
         self.url = 'https://api.superjob.ru/2.0/vacancies/'
 
@@ -54,22 +48,14 @@ class SuperJob(Vacations):
             "page": 0,
             "salary": "100000",
         }
-        respons = requests.get(self.url, params=params, headers=headers)
-        data = respons.json()
-        json.dumps(data, skipkeys=False, ensure_ascii=False, default=str, indent=4)
-        with open(path_sjob, 'w') as f:
-            f.write(data)
-
-        return data
-
-
+        respons_sj = requests.get(self.url, params=params, headers=headers).json()
+        json.dumps(respons_sj, skipkeys=False, ensure_ascii=False, default=str, indent=4)
+        return respons_sj
 
 
 
 hh = HHru()
-# pprint.pprint(hh.get_vacancies.__dict__)
 sj = SuperJob()
+#pprint.pprint(hh.get_vacancies("Python"))
+pprint.pprint(sj.get_vacancies("Python"))
 
-# pprint.pprint(sj.get_vacancies.__dict__)
-hh.get_vacancies("Python")
-sj.get_vacancies("Python")
