@@ -1,61 +1,49 @@
-import pprint
 from abc import ABC, abstractmethod
 import requests
 import json
 import os
-import datetime
-import isodate
 
-path_vacancies = "./vacancies.json"
+
+path_vacancies_hh = "./vacancies_hh.json"
+path_vacancies_sj = "./vacancies_sj.json"
 
 
 class Vacations(ABC):
-    pass
+    @abstractmethod
+    def get_vacancies(self):
+        pass
 
 
-
-class HHru():
+class HHru(Vacations):
     def __init__(self):
             self.url = 'https://api.hh.ru/vacancies'
 
-    def get_vacancies(self, text=str):
-        headers = {"User-Agent": "Vacancies_ParserApp/1.0"}
-        params = {
-            "text": text,
-            "area": 1,
-            "per_page": 100,
-            "page": 0
-        }
-        response_hh = requests.get(self.url, headers=headers, params=params).json()
-        json.dumps(response_hh, skipkeys=False, ensure_ascii=False, default=str, indent=4)
-        return response_hh
+    def get_vacancies(self):
+        return requests.get(self.url, headers={"User-Agent": "Vacancies_ParserApp/1.0"}, params={'text': 'python', 'page': 0, 'count': 100}).json()
+
+    def to_json_hhru(self):
+        response_hh = self.get_vacancies()
+        json_object_hh = json.dumps(response_hh, skipkeys=False, ensure_ascii=False, default=str, indent=4)
+        with open(path_vacancies_hh, 'w', encoding='UTF-8') as f:
+            f.write(json_object_hh)
+            return json_object_hh
 
 
 
-class SuperJob():
+class SuperJob(Vacations):
+
     def __init__(self):
         self.url = 'https://api.superjob.ru/2.0/vacancies/'
+        self.api_key_sj = os.environ.get('API-KEY-SuperJob')
 
 
-    def get_vacancies(self, text=str):
-        headers = {
-            'X-Api-App-Id': os.environ.get('API-KEY-SuperJob'),
-        }
-        params = {
-            "text": text,
-            "area": 1,
-            "count": 100,
-            "page": 0,
-            "salary": "100000",
-        }
-        respons_sj = requests.get(self.url, params=params, headers=headers).json()
-        json.dumps(respons_sj, skipkeys=False, ensure_ascii=False, default=str, indent=4)
-        return respons_sj
+    def get_vacancies(self):
+        return requests.get(self.url, headers={'X-Api-App-Id': self.api_key_sj}, params={'text': 'python', 'page': 0, 'count': 100}).json()
 
-
-
-hh = HHru()
-sj = SuperJob()
-#pprint.pprint(hh.get_vacancies("Python"))
-pprint.pprint(sj.get_vacancies("Python"))
+    def to_json_sujob(self):
+        response_sj = self.get_vacancies()
+        json_object_sj = json.dumps(response_sj, skipkeys=False, ensure_ascii=False, default=str, indent=4)
+        with open(path_vacancies_sj, 'w', encoding='UTF-8') as f:
+            f.write(json_object_sj)
+            return json_object_sj
 
