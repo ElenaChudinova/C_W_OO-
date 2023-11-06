@@ -1,3 +1,4 @@
+import pprint
 from abc import ABC, abstractmethod
 from configparser import ParsingError
 import requests
@@ -40,7 +41,8 @@ class HHru(Vacations):
         if response.status_code != 200:
             raise ParsingError(f"Ошибка получения вакансий! Статус: {response.status_code}")
         return response.json()["items"]
-    def get_vacancies(self, pages_count=10):
+
+    def get_vacancies(self, pages_count):
         self.vacancies = []
         for page in range(pages_count):
             page_vacancies = []
@@ -64,17 +66,12 @@ class HHru(Vacations):
             formated_vacancy = {
                 "title": vacancy["name"],
                 "id": vacancy["id"],
-                "salary_from": vacancy["salary"]["from"],
-                "salary_to": vacancy["salary"]["to"],
+                "salary_from": vacancy.get("from", "null") if vacancy.get("from") else 0,
+                "salary_to": vacancy.get("to", "null") if vacancy.get("to") else 0,
                 "url": vacancy["alternate_url"],
                 "requirement": vacancy["snippet"]["requirement"],
-                "currency": vacancy["salary"]["currency"],
+                "currency": vacancy.get("currency", "Default Description"),
             }
-            if vacancy["salary"]["from"] == "null":
-                formated_vacancy["salary_from"] = 0
-            elif vacancy["salary"]["to"] == "null":
-                formated_vacancy["salary_to"] = 0
-
             formated_vacanies.append(formated_vacancy)
         return formated_vacanies
 
@@ -102,7 +99,7 @@ class SuperJob(Vacations):
             raise ParsingError(f"Ошибка получения вакансий! Статус: {response.status_code}")
         return response.json()["objects"]
 
-    def get_vacancies(self, pages_count=10):
+    def get_vacancies(self, pages_count):
         self.vacancies = []
         for page in range(pages_count):
             page_vacancies = []
@@ -122,19 +119,14 @@ class SuperJob(Vacations):
         formated_vacanies = []
         for vacancy in self.vacancies:
             formated_vacancy = {
-                "title": vacancy["profession"],
+                "title": vacancy.get("profession", ''),
                 "id": vacancy["id"],
-                "salary_from": vacancy["payment_from"],
-                "salary_to": vacancy["payment_to"],
-                "url": vacancy["alternate_url"],
-                "requirement": vacancy["candidat"],
+                "salary_from": vacancy.get("payment_from", '') if vacancy.get("payment_from") else 0,
+                "salary_to": vacancy.get("payment_to", '') if vacancy.get("payment_to") else 0,
+                "url": vacancy.get("link", 'Default Description') if vacancy.get("link") else None,
+                "requirement": vacancy["candidat"].replace('\n', '') if vacancy["candidat"] else None,
                 "currency": vacancy["currency"],
             }
-            if vacancy["payment_from"] == "null":
-                formated_vacancy["salary_from"] = 0
-            elif vacancy["payment_to"] == "null":
-                formated_vacancy["salary_to"] = 0
-
             formated_vacanies.append(formated_vacancy)
         return formated_vacanies
 
@@ -153,20 +145,28 @@ class Vacancy:
             salary = "Не указана"
         else:
             salary_from, salary_to = "", ""
+
             salary = " ".join([salary_from, salary_to]).strip()
         return f"""
-        ID вакансии: \n"
+        ID вакансии: \"{self.id}"
         Вакансия: \"{self.title}"
         Зарплата: \"{salary}"
         Ссылка: \"{self.url}"
-        Опыт: \"{self.requirement}"
+        Опыт и обязанности: \"{self.requirement}"
         """
 
-    def __lt__(self, other):
-        return int(self.salary_from) < int(other.salary_from)
-
     def __gt__(self, other):
-        return int(self.salary_from) > int(other.salary_from)
+        return self.salary_from > other.salary
+
+    def __lt__(self, other):
+        if other.salary is None:
+            # e.g., 10 < None
+            return False
+        if self.salary_from is None:
+            # e.g., None < 10
+            return True
+
+        return self.salary_from < other.salary
 
 
 
@@ -181,7 +181,11 @@ class Connector:
     def select(self):
         with open(self.path_vacancies, "r", encoding='UTF-8') as file:
             vacancies = json.load(file)
-        return [Vacancy(x) for x in vacancies]
+            vacancies_list = [Vacancy(x) for x in vacancies]
+            k = 5
+            for i in range(0, len(vacancies_list), k):
+                row = vacancies_list[i:i+k]
+        return map(str, row)
 
     def sort_by_salary_from(self):
         desc = True if input(
@@ -190,4 +194,3 @@ class Connector:
         ).lower() == ">" else False
         vacancies = self.select()
         return sorted(vacancies, key=lambda x: (x.salary_from if x.salary_from else 0, x.salary_to if x.salary_to else 0), reverse=desc)
-
