@@ -7,7 +7,7 @@ def main():
     hh = HHru(keyword)
     sj = SuperJob(keyword)
     for api in (hh, sj):
-        api.get_vacancies(pages_count=10)
+        api.get_vacancies(pages_count=1)
         vacancies_json.extend(api.get_formated_vacanies())
 
     connector = Connector(keyword=keyword)
@@ -26,10 +26,6 @@ def main():
             vacancies = connector.select()
         elif comand == "2":
             vacancies = connector.sort_by_salary_from()
-        elif comand == "3":
-            vacancies = connector.sorted_vacancies_by_salary_from_desc()
-        elif comand == "4":
-            vacancies = connector.sorted_vacancies_by_salary_to_asc()
 
 
         for vacancy in vacancies:
