@@ -1,10 +1,9 @@
-import pprint
+from datetime import datetime
 from abc import ABC, abstractmethod
 from configparser import ParsingError
 import requests
 import json
 import os
-
 
 path_vacancies = "./vacancies.json"
 api_key_sj = os.getenv('API-KEY-SuperJob')
@@ -15,6 +14,7 @@ class Vacations(ABC):
     @abstractmethod
     def get_request(self):
         pass
+
     @abstractmethod
     def get_vacancies(self):
         pass
@@ -58,23 +58,49 @@ class HHru(Vacations):
                 break
         return self.vacancies
 
-
-
     def get_formated_vacanies(self):
         formated_vacanies = []
         for vacancy in self.vacancies:
-            formated_vacancy = {
-                "title": vacancy["name"],
-                "id": vacancy["id"],
-                "salary_from": vacancy.get("from", "null") if vacancy.get("from") else 0,
-                "salary_to": vacancy.get("to", "null") if vacancy.get("to") else 0,
-                "url": vacancy["alternate_url"],
-                "requirement": vacancy["snippet"]["requirement"],
-                "currency": vacancy.get("currency", "Default Description"),
-            }
-            formated_vacanies.append(formated_vacancy)
-        return formated_vacanies
+            published_date_hh = datetime.strptime(vacancy.get('published_at'), "%Y-%m-%dT%H:%M:%S%z")
+            vacancy_title = vacancy.get('name')
+            vacancy_area = vacancy.get('area')['name']
+            vacancy_url = f"https://hh.ru/vacancy/{vacancy.get('id')}"
+            salary = vacancy.get('salary')
+            if not salary:
+                salary_from = 0
+                salary_to = 0
+                currency = ''
+            else:
+                salary_from = salary.get('from')
+                salary_to = salary.get('to')
+                if not salary_from:
+                    salary_from = salary_to
+                if not salary_to:
+                    salary_to = salary_from
+                currency = vacancy.get('salary')['currency']
+            experience = vacancy.get('experience')['name']
+            requirements = (vacancy.get('snippet')['requirement'])
+            vacancy_id = vacancy.get('id')
+            vacancy_date = published_date_hh.strftime("%d.%m.%Y")
+            if requirements:
+                requirements = requirements.strip().replace('<highlighttext>', '').replace('</highlighttext>', '')
 
+            vacancy_info = {
+                'title': vacancy_title,
+                'id': vacancy_id,
+                'area': vacancy_area,
+                'url': vacancy_url,
+                'salary_from': salary_from,
+                'salary_to': salary_to,
+                'currency': currency,
+                'experience': experience,
+                'requirements': requirements,
+                'date': vacancy_date,
+            }
+
+            formated_vacanies.append(vacancy_info)
+
+        return formated_vacanies
 
 
 class SuperJob(Vacations):
@@ -118,14 +144,17 @@ class SuperJob(Vacations):
     def get_formated_vacanies(self):
         formated_vacanies = []
         for vacancy in self.vacancies:
+            published_date_sj = datetime.fromtimestamp(vacancy.get('date_published', ''))
             formated_vacancy = {
                 "title": vacancy.get("profession", ''),
                 "id": vacancy["id"],
                 "salary_from": vacancy.get("payment_from", '') if vacancy.get("payment_from") else 0,
                 "salary_to": vacancy.get("payment_to", '') if vacancy.get("payment_to") else 0,
                 "url": vacancy.get("link", 'Default Description') if vacancy.get("link") else None,
-                "requirement": vacancy["candidat"].replace('\n', '') if vacancy["candidat"] else None,
+                "requirements": vacancy["candidat"].replace('\n', '') if vacancy["candidat"] else None,
                 "currency": vacancy["currency"],
+                "area": vacancy.get("town")["title"],
+                "date": published_date_sj.strftime("%d.%m.%Y"),
             }
             formated_vacanies.append(formated_vacancy)
         return formated_vacanies
@@ -138,7 +167,9 @@ class Vacancy:
         self.salary_from = vacancy["salary_from"]
         self.salary_to = vacancy["salary_to"]
         self.url = vacancy["url"]
-        self.requirement = vacancy["requirement"]
+        self.requirements = vacancy["requirements"]
+        self.area = vacancy["area"]
+        self.date = vacancy["date"]
 
     def __str__(self):
         if not self.salary_from and not self.salary_to:
@@ -152,21 +183,23 @@ class Vacancy:
         Вакансия: \"{self.title}"
         Зарплата: \"{salary}"
         Ссылка: \"{self.url}"
-        Опыт и обязанности: \"{self.requirement}"
+        Опыт и обязанности: \"{self.requirements}"
+        Город: \"{self.area}"
+        Дата публикации: \"{self.date}"
         """
 
     def __gt__(self, other):
         return self.salary_from > other.salary
 
     def __lt__(self, other):
-        if other.salary is None:
+        if other.salary_to is None:
             # e.g., 10 < None
             return False
         if self.salary_from is None:
             # e.g., None < 10
             return True
 
-        return self.salary_from < other.salary
+        return self.salary_from < other.salary_to
 
 
 
@@ -182,10 +215,12 @@ class Connector:
         with open(self.path_vacancies, "r", encoding='UTF-8') as file:
             vacancies = json.load(file)
             vacancies_list = [Vacancy(x) for x in vacancies]
-            k = 5
+            k = 10
             for i in range(0, len(vacancies_list), k):
-                row = vacancies_list[i:i+k]
-        return map(str, row)
+                row = vacancies_list[i:i + k]
+        return sorted(row)
+
+
 
     def sort_by_salary_from(self):
         desc = True if input(
@@ -193,4 +228,6 @@ class Connector:
             "< - ASC \n>>>"
         ).lower() == ">" else False
         vacancies = self.select()
-        return sorted(vacancies, key=lambda x: (x.salary_from if x.salary_from else 0, x.salary_to if x.salary_to else 0), reverse=desc)
+        return sorted(vacancies,
+                      key=lambda x: (x.salary_from if x.salary_from else 0, x.salary_to if x.salary_to else 0),
+                      reverse=desc)
