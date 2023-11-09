@@ -13,19 +13,21 @@ def main():
     connector = Connector(keyword=keyword)
     connector.insert(vacancies_json)
 
+
     while True:
         comand = input(
             "1 - Вывести список вакансий;\n"
             "2 - Отсортировать по минимальной зарплате;\n"
-            "exit - для выхода.\n"
+            "0 - для выхода.\n"
             ">>>"
         )
-        if comand.lower() == 'exit':
+        if comand.lower() == '0':
             break
         elif comand == "1":
             vacancies = connector.select()
         elif comand == "2":
             vacancies = connector.sort_by_salary_from()
+
 
 
         for vacancy in vacancies:
