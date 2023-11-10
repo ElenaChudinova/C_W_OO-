@@ -170,18 +170,13 @@ class Vacancy:
         self.requirements = vacancy["requirements"]
         self.area = vacancy["area"]
         self.date = vacancy["date"]
+        self.currency = vacancy["currency"]
 
     def __str__(self):
-        if not self.salary_from and not self.salary_to:
-            salary = "Не указана"
-        else:
-            salary_from, salary_to = "", ""
-
-            salary = " ".join([salary_from, salary_to]).strip()
         return f"""
         ID вакансии: \"{self.id}"
         Вакансия: \"{self.title}"
-        Зарплата: \"{salary}"
+        Зарплата: \"от {self.salary_from} до {self.salary_to} {self.currency}"
         Ссылка: \"{self.url}"
         Опыт и обязанности: \"{self.requirements}"
         Город: \"{self.area}"
@@ -189,18 +184,17 @@ class Vacancy:
         """
 
     def __gt__(self, other):
-        return self.salary_from > other.salary
+        return self.salary_from > other.salary_from
 
     def __lt__(self, other):
-        if other.salary_to is None:
+        if other.salary_from is None:
             # e.g., 10 < None
             return False
         if self.salary_from is None:
             # e.g., None < 10
             return True
 
-        return self.salary_from < other.salary_to
-
+        return self.salary_from < other.salary_from
 
 
 class Connector:
@@ -218,16 +212,8 @@ class Connector:
             k = 10
             for i in range(0, len(vacancies_list), k):
                 row = vacancies_list[i:i + k]
-        return sorted(row)
-
-
+        return map(str, row)
 
     def sort_by_salary_from(self):
-        desc = True if input(
-            "> - DESC \n"
-            "< - ASC \n>>>"
-        ).lower() == ">" else False
         vacancies = self.select()
-        return sorted(vacancies,
-                      key=lambda x: (x.salary_from if x.salary_from else 0, x.salary_to if x.salary_to else 0),
-                      reverse=desc)
+        return sorted(vacancies)
