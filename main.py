@@ -2,7 +2,7 @@ from utils import HHru, SuperJob, Connector
 
 def main():
     vacancies_json = []
-    keyword = input("Введите вакансию для поиска: ")
+    keyword = input("Введите вакансию для поиска: ").lower()
 
     hh = HHru(keyword)
     sj = SuperJob(keyword)
