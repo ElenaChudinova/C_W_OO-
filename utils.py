@@ -196,6 +196,9 @@ class Vacancy:
 
         return self.salary_from < other.salary_from
 
+    def average_salary(self):
+        salary = (self.salary_from + self.salary_to) / 2
+        return salary
 
 class Connector:
     def __init__(self, keyword):
@@ -216,4 +219,4 @@ class Connector:
 
     def sort_by_salary_from(self):
         vacancies = self.select()
-        return sorted(vacancies)
+        return sorted(vacancies, key=lambda x: x.average_salary)
