@@ -6,11 +6,13 @@ import json
 import os
 
 path_vacancies = "./vacancies.json"
+
+# API по ключу
 api_key_sj = os.getenv('API-KEY-SuperJob')
 
 
 class Vacations(ABC):
-
+    # Создаем абстрактный класс для работы с API
     @abstractmethod
     def get_request(self):
         pass
@@ -21,6 +23,11 @@ class Vacations(ABC):
 
 
 class HHru(Vacations):
+    """
+    Создаем класс, наследующийся от абстрактного класса.
+    Класс умеет подключаться к API HeadHunter
+    и получать вакансии.
+    """
     def __init__(self, keyword):
         self.url = 'https://api.hh.ru/vacancies'
         self.params = {
@@ -44,6 +51,7 @@ class HHru(Vacations):
         return response.json()["items"]
 
     def get_vacancies(self, pages_count):
+        # Получаем загруженные страницы с сайта HeadHunter по вакансиям
         self.vacancies = []
         for page in range(pages_count):
             page_vacancies = []
@@ -60,6 +68,7 @@ class HHru(Vacations):
         return self.vacancies
 
     def get_formated_vacanies(self):
+        # Получаем отформатированные вакансии под единый формат
         formated_vacanies = []
         for vacancy in self.vacancies:
             published_date_hh = datetime.strptime(vacancy.get('published_at'), "%Y-%m-%dT%H:%M:%S%z")
@@ -105,6 +114,11 @@ class HHru(Vacations):
 
 
 class SuperJob(Vacations):
+    """
+       Создаем класс, наследующийся от абстрактного класса.
+       Класс умеет подключаться к API SuperJob
+       и получать вакансии.
+       """
 
     def __init__(self, keyword):
         self.url = 'https://api.superjob.ru/2.0/vacancies/'
@@ -127,6 +141,7 @@ class SuperJob(Vacations):
         return response.json()["objects"]
 
     def get_vacancies(self, pages_count):
+        # Получаем загруженные страницы с сайта SuperJob по вакансиям
         self.vacancies = []
         for page in range(pages_count):
             page_vacancies = []
@@ -143,6 +158,7 @@ class SuperJob(Vacations):
         return self.vacancies
 
     def get_formated_vacanies(self):
+        # Получаем отформатированные вакансии под единый формат
         formated_vacanies = []
         for vacancy in self.vacancies:
             published_date_sj = datetime.fromtimestamp(vacancy.get('date_published', ''))
@@ -162,6 +178,17 @@ class SuperJob(Vacations):
 
 
 class Vacancy:
+    """
+    Создаем класс для работы с вакансиями. В этом классе определяем нужные нам атрибуты:
+
+    - название вакансии;
+    - ссылка на вакансию;
+    - зарплата;
+    - опыт и требования;
+    - город;
+    - дата публикации.
+    Класс поддерживает методы сравнения вакансий между собой по зарплате.
+    """
     def __init__(self, vacancy):
         self.title = vacancy["title"]
         self.id = vacancy["id"]
@@ -198,6 +225,7 @@ class Vacancy:
         return self.salary_from < other.salary_from
 
     def average_salary(self):
+        # Функция определяет среднюю зарплату по вакансии
         if self.salary_from and self.salary_to:
             return (self.salary_from + self.salary_to) / 2
         elif self.salary_from:
@@ -209,6 +237,10 @@ class Vacancy:
 
 
 class Connector:
+    """
+    Создаем класс для сохранения информации о вакансиях в JSON-файл, а также получения
+    данных из файла по указанным критериям информации о вакансиях
+    """
     def __init__(self, keyword):
         self.path_vacancies = f"{keyword.title()}.json()"
 
@@ -223,11 +255,16 @@ class Connector:
         return vacancies_list
 
     def sort_by_salary_from(self):
+        # Функция производит сортировку вакансий по минимальной зарплате
         vacancies = self.select()
         sort_vacancies = sorted(vacancies, key=lambda x: x.average_salary())
         return sort_vacancies
 
     def top_salary(self):
+        """
+        Функция производит обратную сортировку вакансий по зарплате и выводит ТОП-5
+        по самой высокой заработной плате
+        """
         vacancies = self.select()
         sort_vacancies = sorted(vacancies, key=lambda x: x.average_salary(), reverse=True)
         return sort_vacancies[:5]
