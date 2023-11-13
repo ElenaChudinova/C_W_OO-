@@ -24,7 +24,8 @@ class HHru(Vacations):
     def __init__(self, keyword):
         self.url = 'https://api.hh.ru/vacancies'
         self.params = {
-            "per_page": 100,
+            "area": 113,
+            "per_page": 50,
             "page": None,
             "keyword": keyword,
             "archive": False,
@@ -108,7 +109,7 @@ class SuperJob(Vacations):
     def __init__(self, keyword):
         self.url = 'https://api.superjob.ru/2.0/vacancies/'
         self.params = {
-            "count": 100,
+            "count": 50,
             "page": None,
             "keyword": keyword,
             "archive": False,
@@ -197,8 +198,15 @@ class Vacancy:
         return self.salary_from < other.salary_from
 
     def average_salary(self):
-        salary = (self.salary_from + self.salary_to) / 2
-        return salary
+        if self.salary_from and self.salary_to:
+            return (self.salary_from + self.salary_to) / 2
+        elif self.salary_from:
+            return self.salary_from
+        elif self.salary_to:
+            return self.salary_to
+        else:
+            return 0
+
 
 class Connector:
     def __init__(self, keyword):
@@ -212,11 +220,14 @@ class Connector:
         with open(self.path_vacancies, "r", encoding='UTF-8') as file:
             vacancies = json.load(file)
             vacancies_list = [Vacancy(x) for x in vacancies]
-            k = 10
-            for i in range(0, len(vacancies_list), k):
-                row = vacancies_list[i:i + k]
-        return map(str, row)
+        return vacancies_list
 
     def sort_by_salary_from(self):
         vacancies = self.select()
-        return sorted(vacancies, key=lambda x: x.average_salary)
+        sort_vacancies = sorted(vacancies, key=lambda x: x.average_salary())
+        return sort_vacancies
+
+    def top_salary(self):
+        vacancies = self.select()
+        sort_vacancies = sorted(vacancies, key=lambda x: x.average_salary(), reverse=True)
+        return sort_vacancies[:5]
