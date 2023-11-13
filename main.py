@@ -18,6 +18,7 @@ def main():
         comand = input(
             "1 - Вывести список вакансий;\n"
             "2 - Отсортировать по минимальной зарплате;\n"
+            "3 - Вывести ТОП-5 вакансий по зарплате;\n"
             "0 - для выхода.\n"
             ">>>"
         )
@@ -27,7 +28,8 @@ def main():
             vacancies = connector.select()
         elif comand == "2":
             vacancies = connector.sort_by_salary_from()
-
+        elif comand == "3":
+            vacancies = connector.top_salary()
 
 
         for vacancy in vacancies:
